@@ -1,0 +1,13 @@
+{
+    "bullionvault":{
+        "username":"",
+        "password":""
+    },
+    "oanda":{
+        "account_id":"",
+        "access_token":""
+    },
+    "quandl":{
+        "api_key":""
+    }
+}
