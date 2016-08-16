@@ -128,9 +128,9 @@ def main_trade(args):
     def prec(num):
         return "{:.2f}".format(num)
     def time_format(time_):
-        return datetime.fromtimestamp(
+        return datetime.utcfromtimestamp(
             time_).isoformat("T") + "Z"
-    def crawlable_day(current_time):
+    def tradable_day(current_time):
         """
             return True iff market is open
             tocom : 月曜9:00-土曜4:00ま(東京時間)
@@ -140,8 +140,8 @@ def main_trade(args):
                       月曜10:30-金曜15:00 - 金曜24:00?
             したがって月曜10:30 - 金曜19:00(GMT+0)が共通の取引時間
         """
-        utc = datetime.fromtimestamp(current_time)
-        # utc = datetime.utcnow()
+        utc = datetime.utcfromtimestamp(current_time)
+        # utc = datetime.now()
         weekday = utc.weekday()
         minute = utc.minute + utc.hour * 60
         # skip holidays
@@ -175,7 +175,13 @@ def main_trade(args):
             current_time =  int(datetime.now().strftime("%s"))
             status, order_at, settle_at, stop_loss \
                     = buy_sell_stay(prices, current_time)
-            if (status == 'ignore' or status == 'stay'):
+
+            if not tradable_day(current_time):
+                """
+                    NO_OP
+                """
+
+            elif (status == 'ignore' or status == 'stay'):
                 if(verbose):
                     print status, order_at, settle_at, stop_loss
             else:
@@ -228,10 +234,10 @@ def main_backtest(args):
     def prec(num):
         return "{:.2f}".format(num)
     def time_format(time_):
-        return datetime.fromtimestamp(
+        return datetime.utcfromtimestamp(
             time_).isoformat("T") + "Z"
     
-    def crawlable_day(current_time):
+    def tradable_day(current_time):
         """
             return True iff market is open
             tocom : 月曜9:00-土曜4:00ま(東京時間)
@@ -240,8 +246,8 @@ def main_backtest(args):
                       月曜10:30-金曜15:00 - 金曜24:00?
             したがって月曜10:30 - 金曜19:00(GMT+0)が共通の取引時間
         """
-        utc = datetime.fromtimestamp(current_time)
-        # utc = datetime.utcnow()
+        utc = datetime.utcfromtimestamp(current_time)
+        # utc = datetime.now()
         weekday = utc.weekday()
         minute = utc.minute + utc.hour * 60
         # skip holidays
@@ -272,7 +278,7 @@ def main_backtest(args):
     until = int(args.to_time)
     try:
         while current_time < until:
-            if not crawlable_day(current_time):
+            if not tradable_day(current_time):
                 current_time += backtest_time_diff
                 pass
             # order every 5 seconds
@@ -1068,7 +1074,7 @@ class QuandlMonitor(Monitor):
             self.url += '&api_key='+api_key
 
     def _update(self):
-        now = datetime.utcnow()
+        now = datetime.now()
         url = self.url.format(now.strftime("%Y-%m-%d"))
         self._data = self.openAnything(url)
         json_data = json.loads(self._data)
