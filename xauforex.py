@@ -439,10 +439,23 @@ def main_status(args):
             access_token=access_token)
     # pprint (oanda.get_transaction_history(account_id)['transactions'][0])
     # pprint (oanda.get_eco_calendar(instrument = 'GBP_JPY', period = 604800))
+    def time2int(x):
+        return int(datetime.strptime(x, '%Y-%m-%dT%H:%M:%S.000000Z').strftime("%s"))
+
+    def history2xy(x):
+        accountBalance = float(x['accountBalance'])
+        time_ = time2int(x['time'])
+        return np.array([time_,accountBalance])
+
+    def history_has_balance_time(x):
+        return ('accountBalance' in x) and ('time' in x) \
+                and (time2int(x['time']) > 1471002929)
+
     try: 
         while True:
             print ("latest transaction history")
-            pprint (oanda.get_transaction_history(account_id)['transactions'][0])
+            history = oanda.get_transaction_history(account_id)['transactions']
+            pprint (history[len(history)-1])
             print ("unconfirmed positions")
             pprint (oanda.get_positions(account_id))
             print ("orders list")
@@ -456,6 +469,11 @@ def main_status(args):
                 sleep(args.interval)
     except KeyboardInterrupt:
         print ("aborted")
+
+    # history = oanda.get_transaction_history(account_id, count = 500)['transactions']
+    # xy = np.array(map(history2xy, filter(history_has_balance_time, history))).T
+    # plt.plot(xy[0], xy[1], "y")
+    # plt.show()
 
 def main_draw(args):
     if args.sma:
