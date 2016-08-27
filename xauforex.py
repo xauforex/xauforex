@@ -47,7 +47,7 @@ def main():
             help='seconds until order expires')
     parser_trade.add_argument('--base-units', type=int, default = 10,
             help='order base units')
-    parser_trade.add_argument('--trailing-stop', type=int, default = 10,
+    parser_trade.add_argument('--trailing-stop', type=int, default = 0,
             help='trailing stop pips')
     parser_trade.add_argument('-v', '--verbose',
             action = 'store_true', default = False,
@@ -65,7 +65,7 @@ def main():
             help='seconds until order expires')
     parser_monitortrade.add_argument('--base-units', type=int, default = 10,
             help='order base units')
-    parser_monitortrade.add_argument('--trailing-stop', type=int, default = 10,
+    parser_monitortrade.add_argument('--trailing-stop', type=int, default = 0,
             help='trailing stop pips')
     parser_monitortrade.add_argument('--interval', type=int, default = 5,
             help='interval for checking order')
@@ -82,13 +82,13 @@ def main():
             help='seconds until order expires')
     parser_backtest.add_argument('--base-units', type=int, default = 10,
             help='order base units')
-    parser_backtest.add_argument('--trailing-stop', type=int, default = 10,
+    parser_backtest.add_argument('--trailing-stop', type=int, default = 0,
             help='trailing stop pips')
     parser_backtest.add_argument('-v', '--verbose',
             action = 'store_true', default = False,
             help='verbose output')
     parser_backtest.add_argument('--backtest-time-diff',
-            type=int, default = 30,
+            type=int, default = 5,
             help='time diff to exec backtest')
     parser_backtest.add_argument('--gain-graph',
             action = 'store_true',
@@ -356,6 +356,10 @@ def main_backtest(args):
         """
         x_oand, y_oand = get_time_series('OANDA', \
                     'GBP', 'JPY', start_time, until, prices)
+        x_oand, y_oand_ask = get_time_series('OANDA', \
+                'GBP', 'JPY', start_time, until, prices, func = lambda x: [x.get_ask(), x.timestamp])
+        x_oand, y_oand_bid = get_time_series('OANDA', \
+                'GBP', 'JPY', start_time, until, prices, func = lambda x: [x.get_bid(), x.timestamp])
         all_orders = orders.load(ts_start = start_time, ts_end = until)
         
         time, gain = [], []
@@ -365,52 +369,54 @@ def main_backtest(args):
             total_old = total
             current_time =  x_oand[i]
             current_price = Decimal(y_oand[i])
+            current_ask = Decimal(y_oand_ask[i])
+            current_bid = Decimal(y_oand_bid[i])
             for j in xrange(len(all_orders)):
                 # all_orders[j] = all_orders[j]
                 if(all_orders[j].time < current_time and \
                         all_orders[j].status == 'created'):
                     if(all_orders[j].side == 'buy' and \
-                            all_orders[j].takeProfit < current_price):
+                            all_orders[j].takeProfit < current_ask):
                         all_orders[j].status = 'buy profit'
                         # take profit
-                        profit = (current_price-Decimal(all_orders[j].price))\
+                        profit = (current_ask-Decimal(all_orders[j].price))\
                                 *Decimal(all_orders[j].units)
                         total +=  profit
                         # print profit
                     elif(all_orders[j].side == 'buy' and \
-                            all_orders[j].stopLoss > current_price):
+                            all_orders[j].stopLoss > current_bid):
                         all_orders[j].status = 'buy stoploss'
                         # stop loss
-                        profit = (current_price-Decimal(all_orders[j].price))\
+                        profit = (current_bid-Decimal(all_orders[j].price))\
                                 *Decimal(all_orders[j].units)
                         total +=  profit
                         # print profit
                     elif(all_orders[j].side == 'buy' and \
                             all_orders[j].expiry < current_time):
                         all_orders[j].status = 'buy expire'
-                        profit = (current_price-Decimal(all_orders[j].price))\
+                        profit = (current_ask-Decimal(all_orders[j].price))\
                                 *Decimal(all_orders[j].units)
                         total +=  profit
                         # print profit
                     elif(all_orders[j].side == 'sell' and \
-                            all_orders[j].takeProfit > current_price):
+                            all_orders[j].takeProfit > current_bid):
                         all_orders[j].status = 'sell profit'
                         # take profit
-                        profit = (-current_price+Decimal(all_orders[j].price))\
+                        profit = (-current_bid+Decimal(all_orders[j].price))\
                                 *Decimal(all_orders[j].units)
                         total +=  profit
                         # print profit
                     elif(all_orders[j].side == 'sell' and \
-                            all_orders[j].stopLoss < current_price):
+                            all_orders[j].stopLoss < current_ask):
                         all_orders[j].status = 'sell stoploss'
                         # stop loss
-                        profit = (-current_price+Decimal(all_orders[j].price))\
+                        profit = (-current_ask+Decimal(all_orders[j].price))\
                                 *Decimal(all_orders[j].units)
                         total +=  profit
                     elif(all_orders[j].side == 'sell' and \
                             all_orders[j].expiry < current_time):
                         all_orders[j].status = 'sell expire'
-                        profit = (-current_price+Decimal(all_orders[j].price))\
+                        profit = (-current_bid+Decimal(all_orders[j].price))\
                                 *Decimal(all_orders[j].units)
                         total +=  profit
                         # print profit
