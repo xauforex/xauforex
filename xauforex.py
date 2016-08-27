@@ -440,7 +440,12 @@ def main_status(args):
     # pprint (oanda.get_transaction_history(account_id)['transactions'][0])
     # pprint (oanda.get_eco_calendar(instrument = 'GBP_JPY', period = 604800))
     def time2int(x):
-        return int(datetime.strptime(x, '%Y-%m-%dT%H:%M:%S.000000Z').strftime("%s"))
+        try:
+            _time = int(datetime.strptime(x, '%Y-%m-%dT%H:%M:%S.000000Z').strftime("%s"))
+        except:
+            _time = int(datetime.strptime(x, '%Y-%m-%dT%H:%M:%SZ').strftime("%s"))
+
+        return _time
 
     def history2xy(x):
         accountBalance = float(x['accountBalance'])
@@ -469,11 +474,30 @@ def main_status(args):
                 sleep(args.interval)
     except KeyboardInterrupt:
         print ("aborted")
-
-    # history = oanda.get_transaction_history(account_id, count = 500)['transactions']
-    # xy = np.array(map(history2xy, filter(history_has_balance_time, history))).T
-    # plt.plot(xy[0], xy[1], "y")
-    # plt.show()
+    """
+    history_data = []
+    max_id = False
+    while True:
+        if(max_id):
+            history = oanda.get_transaction_history(account_id, maxId = max_id)['transactions']
+        else:
+            history = oanda.get_transaction_history(account_id)['transactions']
+            
+        if(len(history)):
+            history_data = history_data + history
+            ids = map(lambda x: x['id'], history)
+            max_id = min(ids) - 1
+            print max_id
+        else:
+            break
+    # curl -X GET -I -H "Authorization: Bearer 0000000000000000000-aaaaaaaaaaaaaaaaaaaaaa" \
+    #        "https://api-fxpractice.oanda.com/v1/accounts/12345/alltransactions"
+    with open("data/a.json") as data_file:
+        history_data = json.load(data_file)
+    xy = np.array(map(history2xy, filter(history_has_balance_time, history_data))).T
+    plt.plot(xy[0], xy[1], "y")
+    plt.show()
+    """
 
 def main_draw(args):
     if args.sma:
@@ -1177,7 +1201,11 @@ class OandaMonitor(oandapy.Streamer):
     def start_monitor(self, verbose):
         self.verbose = verbose
         self.store = PriceStore(self.filename)
-        self.rates(self.account_id, instruments = self.instruments)
+        while True:
+            try:
+                self.rates(self.account_id, instruments = self.instruments)
+            except httplib.IncompleteRead as e:
+                pass
 
 class MonitorError(Exception):
     def __init__(self, message):
