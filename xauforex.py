@@ -208,8 +208,8 @@ def main_trade(args):
                             upperBound < stopLoss ):
 
                         response = oanda.create_order(account_id,
-                           lowerBound   = lowerBound,
-                           upperBound   = upperBound,
+                           # lowerBound   = lowerBound,
+                           # upperBound   = upperBound,
                            stopLoss     = stopLoss  ,
                            takeProfit   = takeProfit,
                            price        = price     ,
